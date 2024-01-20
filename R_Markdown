@@ -1,0 +1,2203 @@
+---
+title: "Data Manipulation and Analysis"
+author: "Boris Borislavov Ivanov"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Project Explanation
+
+## Steps:
+
+**1. Loading The Libraries:** (page: 4-5)
+
+**2. Loading The Data sets:** (page: 5)
+
+**3. Standardising the Data sets:** (page: 5-7)
+
+**4. Merging the data sets:** (page: 7-11)
+
+**5. Removing and Fixing Wrong Entries in the data sets:** (page: 11-31)
+
+**6. Extracting Year, Month, Day, Day_of_the_week:** (page: 31-36)
+
+**7. Calculating Processing Time:** (page: 36-37)
+
+**8. Calculating Net Sales and Unit Price:** (page: 38-39)
+
+**9. Calculating Avg, Max, Min per each year for each product:** (page: 39-40)
+
+**10. Calculating Total Order Price and Profit:** (page: 40-41)
+
+## Steps Explanation:
+
+1.  For This processing report we need to load 6 Libraries. The libraries we are loading are:
+
+-   **library(readxl):** We need this to load the excel files that we are going to use in the report.
+-   **library(openxlsx):** Similary to readxl it's for reading excel files but it gives us the opurtunity to create and write excel files.
+-   **library(dplyr):** This library is for the data manipulation part where we filter, select, mutate and etc.
+-   **library(ggplot2):** We are using ggplot to visualize our findings during the data preparation part.
+-   **library(DataExplorer):** This library is for automating some parts of the EDA analysis
+
+2.  **Loading the datasets.** This step involves downloading the data files and putting them in the working directory of the project. After that we inichilise under which data frame name we want to load it. After that we load it using the read_excel function from **readxl library**, specifying the path of the file and also the sheet name we want to load from the file. For the only csv file which is World Cities we use the read.csv function.
+
+3.  **Standardising the Data sets.**This is crucial for our analysis because here we make all the variables and values the same in order to avoid issues when merging the data sets.
+
+-   First we start with renaming the variable Product ID in Product data frame.
+
+-   Renaming columns: We create a function to rename the variable names in a specified data frame by replacing spaces and dashes between two words in a variable. The function go through all the column names and if there are two words with an empty space or a dash it changes it to underscore(*). First we say how we want to call the function. In our case (rename_columns). After that we say that we want to rename columns and after that we use the function. gsub. This function is used for finding the pattern and replacing it with (*). After that end we return the data. At the end we call the function on our data sets to replace the values. We need to rename the column to use them properly without errors in the code.
+
+-   Dropping columns: We drop the columns we don't need in our case Row_ID from both Orders and Orders_2016.
+
+-   After that we go for the preparation of the World Cities data frame which involves. Selecting the column we need, renaming the columns to be the same way as the ones in Orders data frame. Finally we filter for the United States as a country because we only need the cities from the US.
+
+-   The final step here is to fix the cities values in the column city in World_Cities data frame in order to have the same values as in Orders. The cities are the same they are just spelled differently.
+
+4.  **Merging the data sets:** In this step we are combining the data sets based on matching column. The only one we are merging by rows is Order_2016 which we found that was missing during the analysis. Our main data frame is Orders_Processing.
+
+-   First we duplicate the original data set to work on new one specially created for the processing.
+
+-   Orders and Products. Here before merging we need to remove the duplicate values in Products_Processing data frame. After that we rename the values Office_Supplies. We merge by Product_ID column. We use the function merge to perform an inner_join and have all the matching rows and the new columns in our main data frame. We do this merge first to make Orders_Processing the same as Orders_2016_Processing because we recived it with columns Category, Sub_Category, and Product_Name which are not present in Orders_Processing.
+
+-   Orders and Orders 2016: Here we merge them by rows with the function rbind that's why we don't specify a specific column.
+
+-   Orders and Returns: Here we perform a left_join to merge the data sets. We choose to merge them with left_join because we need the values from Returned data set to enter our main data set. We merge them by Order_ID column. From here we get if the order is returned or not. The way we merge them is putting the yes values where we have a match between the data sets. At the end we fill the NA values with No.
+
+-   Orders and City: Similary to the previous one we use left_join but here we specify the merging not only by the city because there are duplicates in different states. The columns we are merging by are City, State and Country
+
+-   Orders_Processing with Demographics: Here we perform a left_join again and we merge by State. We do this merging in order to get the demographics data.
+
+5.  **Fixing the Wrong Data Entries and EDA.** This step involves analysing and understanding the data and all the values that are present in it. It is important because wrong data entries can lead to miss understandings in the data or even worse wrong calculations during the data enginering part. We don't just throw away the wrong data entries. We create a separate data frame for them to explain them later on. Here we go through every column to make sure that we don't miss something.
+
+-   We start by removing the observations that contain Italy in Country column.
+
+-   City Column here there are no wrong entries after removing Italy because it contained Rome.
+
+-   State column is perfect as well.
+
+-   Postal Code as well. There are no wrong data entries. It contain 4 and 5 digit codes which is normal for the USA. We find this by creating a function to count the number of digits in each row.
+
+-   Region Column is perfect we have 4 regions which are normal. "Central" "South" "West" "East".
+
+-   Discount Column here there are wrong data entries in how discounts are typed. There is one value 1.4 and one that 1.6. We move them to the wrong data entry df.
+
+-   Quantity column first looks normal when you check it out but if you look deeper you can see the mistake. The mistake is that the product with 19 Quantity has an order price of 0.0002 which is not normal.
+
+-   Sales Column no wrong data entries.
+
+-   In profit column there is one value which is wrong and it is wrong because the highest sales ever recorded for the company are 22 thousand and in this observation the profit is 100 000 also the sales of this order are below it.
+
+-   After that we won't go any further down because there are products with the same name with different product id and vice verse. We will limit our analysis to product categories and sub_categories that why we won't explore the wrong data entries here.
+
+-   There are 6 wrong values in Office Supplies which are Test Values. We remove them because they are not needed.
+
+6.  **Extracting Year, Month, Day, Day_of_the_week:**In this step we extract data from Order Date column so we extract the Year of the Order, Month, Day and Day of the week. For the first three we use the function format and for the last one weekdays. Format function is used to convert data time objects in to character string. That why we specify later that we want to do extract it as numeric.
+
+-   **Year:** We extract the year by first specifying that we want to create a new column called Year. after that we say that we want to extract it like a numerical value and we call the function format. After that we say from which column and what we want to extract. For year this- "%Y".
+
+-   **Month:** We extract the month the same way the only thing that changes is the parameter and column name we are extracting. For month this- "%m".
+
+-   **Day:** Everything is the same only we change the parameter to extract the day- "%d" and the name of the column we want to create.
+
+-   **Day_Of_Week:** Here the approach is different we use a function called weekdays to extract the week day. The weekdays function in R takes a date object and returns the day of the week for each date. The days are returned as full names like Monday and Friday.
+
+7.  **Calculating Processing Time:** Here we calculate how many days are needed for proccesing the order and sending it for shipping. It is important for Analysing how different order sizes influence the processing time and stuff like this. We do it by using the difftime function which allows us to calculate the distance between two given dates in our case Order_Date and Ship_Date. At the end we specify the units we want in our case days.
+
+8.  **Calculating Net Sales and Unit Price:** We calculate the Net Sales by subtracting the product of sales and discount from the total sales. This gives us the actual revenue earned after discounts. Next, we calculate the Unit Price, which is the net sales divided by the quantity sold. This gives us the price per unit of each product.
+
+**Net Sales Calculation:**
+
+The Net Sales is calculated using the formula:
+
+Net Sales = Sales - (Sales × Discount)
+
+Where:
+
+-   Sales is the total sales amount before any discounts. Discount is the discount rate applied to the sales (in decimal form).
+
+**Unit Price Calculation:**
+
+The Unit Price is calculated using the formula:
+
+Unit Price = Net Sales / Quantity
+
+Where:
+
+-   `Net Sales` is the revenue after discounts, calculated as: `Net Sales = Sales - (Sales × Discount)`. `Quantity` is the number of units sold.
+
+9.  **Calculating Avg, Max, Min per each year for each product:** This step involves aggregating the data in the Orders_Processing data frame by Product_ID and Year. For each product and year, we calculate the average, maximum, and minimum unit prices. These metrics provide insights into the pricing trends over time for each product, helping us understand how pricing strategies are adjusted annually.
+
+10. **Calculating Total Order Price and Profit:** In the final step, we focus on calculating the total order price and total profit per order. By grouping the data by Order_ID, we sum up the net sales to get the Total Order Price, which represents the total revenue from each order. Similarly, we sum up the profit for each order to get the Total Order Profit.
+
+11. **Wrong Data Entry Report:**The wrong Data Entry Report contains 11 observations. This 11 observations should not be in our data set because with them potential issues could arise. The first is the observation with Italy as a country. It is part of another data set probably because all other orders are from the USA. In out case we don't need it. After that are discounts with values 1.4 and 1.6 . After that we add the observation with quantity 19. This is something normal to have 19 quantity but in our case the order value was 0.0002 which is strange for 19 units. After that we take out the one with profit of 135k which is also not normal because the sales are way less. Last but not least all the test values which are 6. This gives us a total of 11 wrong data entry values.
+
+# Set Up2
+
+## Loading The Libraries2
+
+```{r}
+library(readxl) # For reading excel files
+library(openxlsx)
+library(dplyr) # For data manipulation
+library(ggplot2) # For data visualization
+library(tidyverse) # For data manipulation
+library(DataExplorer) # For automating the exploratory data analysis
+```
+
+## Loading The Datasets2
+
+```{r}
+# Orders
+
+Orders <- read_excel("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /AEKI_Data.xlsx", sheet = "Orders")
+
+# Products
+Products <- read_excel("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /AEKI_Data.xlsx", sheet = "Products")
+
+# Returns
+Returns <- read_excel("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /AEKI_Data.xlsx", sheet = "Returns")
+
+# Demographics
+Demographics <- read_excel("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /AEKI_Data.xlsx", sheet = "Demographics")
+
+# World Cities csv
+World_Cities <- read.csv("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /worldcities.csv")
+
+# Orders 2016
+Orders_2016 <- read_excel("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /AEKI_2016.xlsx")
+```
+
+## Standartizing The Datasets
+
+### Renaming The Columns
+
+```{r}
+# Products dataset
+colnames(Products)[colnames(Products) == "ID Product"] <- "Product ID"
+```
+
+### Creating a function to rename the dataset
+
+```{r}
+# Create a function to rename columns
+rename_columns <- function(data) {
+    # Replace spaces and hyphens with underscores
+    colnames(data) <- gsub(" |-", "_", colnames(data))
+    return(data)
+}
+
+```
+
+### Rename columns in the data sets
+
+```{r}
+# Orders
+Orders <- rename_columns(Orders)
+
+# Products
+Products <- rename_columns(Products)
+
+# Returns
+Returns <- rename_columns(Returns)
+
+# Demographics
+Demographics <- rename_columns(Demographics)
+
+# Orders 2016
+Orders_2016 <- rename_columns(Orders_2016)
+```
+
+### Dropping Columns
+
+```{r}
+# Orders
+
+# Drop the column called ROW_ID
+Orders <- subset(Orders, select = -Row_ID)
+Orders_2016 <- subset(Orders_2016, select = -Row_ID)
+
+
+
+```
+
+### Getting the needed data from World Cities
+
+```{r}
+# World Cities
+World_Cities <- World_Cities %>%
+    select(city, country, admin_name, lat, lng, population, id) %>%
+    rename(City_ID = id, City_Population = population, City = city, State = admin_name, Country = country) %>%
+    filter(Country == "United States")
+
+```
+
+### Renaming Values in the City Column: World Cities Df
+
+```{r}
+#### Rename New York to New York City ####
+World_Cities$City[World_Cities$City == "New York"] <- "New York City"
+
+#### Rename Port St. Lucie to Port Saint Lucie ####
+World_Cities$City[World_Cities$City == "Port St. Lucie"] <- "Port Saint Lucie"
+
+#### Rename McAllen to Mcallen ####
+World_Cities$City[World_Cities$City == "McAllen"] <- "Mcallen"
+
+#### Rename St. Cloud to Saint Cloud when the state is Minnesota ####
+World_Cities$City[World_Cities$City == "St. Cloud" & World_Cities$State == "Minnesota"] <- "Saint Cloud"
+
+#### Rename St. Petersburg to Saint Petersburg ####
+World_Cities$City[World_Cities$City == "St. Petersburg"] <- "Saint Petersburg"
+
+#### Rename St. Charles to Saint Charles ####
+World_Cities$City[World_Cities$City == "St. Charles"] <- "Saint Charles"
+
+#### Rename St. Louis to Saint Louis ####
+World_Cities$City[World_Cities$City == "St. Louis"] <- "Saint Louis"
+
+#### Rename St. Peters to Saint Peters ####
+World_Cities$City[World_Cities$City == "St. Peters"] <- "Saint Peters"
+
+#### Rename St. Paul to Saint Paul ####
+World_Cities$City[World_Cities$City == "St. Paul"] <- "Saint Paul"
+
+#### Rename Milford city to Milford ####
+World_Cities$City[World_Cities$City == "Milford city"] <- "Milford"
+
+#### Rename Novi in Michigan to Canton ####
+World_Cities$City[World_Cities$City == "Novi" & World_Cities$State == "Michigan"] <- "Canton"
+
+```
+
+### Checking for NA Values
+
+```{r}
+# Create a function to check for NA values in the data
+check_na <- function(data) {
+    na_count <- sum(is.na(data))
+    if (na_count > 0) {
+        print(paste("There are", na_count, "NA values in the data"))
+    } else {
+        print("There are no NA values in the data")
+    }
+}
+
+# Run the function that we created for each data set to see if there are any NA values
+check_na(Orders)
+check_na(Products)
+check_na(Returns)
+check_na(Demographics)
+check_na(World_Cities)
+
+```
+
+### Visually Inspect for NA values
+
+```{r}
+plot_missing(Orders)
+plot_missing(Products)
+plot_missing(Returns)
+plot_missing(Demographics)
+plot_missing(World_Cities)
+```
+
+# Merging Data Frames
+
+## Duplicate the original data frames
+
+```{r}
+Orders_Processing <- Orders
+Products_Processing <- Products
+Orders_2016_Processing <- Orders_2016
+Returns_Processing <- Returns
+Citites_Processing <- World_Cities
+Demographics_Processing <- Demographics
+```
+
+## Merge Data Frames: Orders and Products
+
+```{r}
+# Fixing the wrong values
+
+# Dropping the duplicate rows from the Product ID column
+Products_Processing <- Products_Processing[!duplicated(Products_Processing$Product_ID), ]
+
+# Rename the values in columnn Category:  "Office Suplies"  to "Office Supplies"
+Products_Processing$Category[Products_Processing$Category == "Office Suplies"] <- "Office Supplies"
+
+# Create a function to find the common columns between data sets
+common_columns <- function(data1, data2) {
+    common_columns <- intersect(colnames(data1), colnames(data2))
+    print(common_columns)
+}
+
+# Find the common columns between Order and other data sets based on column names
+common_columns(Orders_Processing, Products_Processing)
+
+dim(Orders_Processing)
+dim(Products_Processing)
+
+# Combine the two data sets based on the Product ID column
+Orders_Processing <- merge(Orders_Processing, Products_Processing, by = "Product_ID")
+
+dim(Orders_Processing)
+
+# Check if there are any NA values in the merged data set
+sum(is.na(Orders_Processing))
+
+
+```
+
+## Merge Data Frames: Orders_Products and Orders_2016
+
+```{r}
+common_columns(Orders_Processing, Orders_2016_Processing)
+
+dim(Orders_Processing)
+
+dim(Orders_2016_Processing)
+
+# Combine the two data sets based on the Order ID column
+
+Orders_Processing <- rbind(Orders_Processing, Orders_2016_Processing)
+
+dim(Orders_Processing)
+
+sum(is.na(Orders_Processing))
+
+
+```
+
+## Merge Data Frames: Orders_Processing and Returns
+
+```{r}
+dim(Orders_Processing)
+sum(is.na(Orders_Processing$Order_ID))
+dim(Returns_Processing)
+
+Orders_Processing <- Orders_Processing %>%
+    left_join(Returns_Processing[, c("Order_ID", "Returned")], by = "Order_ID")
+
+
+sum(is.na(Orders_Processing$Returned))
+
+# Replace NA in the Returned column with "no"
+Orders_Processing$Returned[is.na(Orders_Processing$Returned)] <- "No"
+
+dim(Orders_Processing)
+
+sum(is.na(Orders_Processing))
+
+```
+
+## Merge Dataframes: Orders_Processing with Citites
+
+```{r}
+# We need to merge based on two column City and State because there are duplicates in City Column and State Column makes them unique
+dim(Orders_Processing)
+
+dim(Citites_Processing)
+
+# Rename Orange to East Orange
+Orders_Processing$City[Orders_Processing$City == "Orange"] <- "East Orange"
+
+# We choose to rename East Orange because when we check the region column all the values with Orange are from East
+
+# Merge the datasets again
+Orders_Processing <- Orders_Processing %>%
+    left_join(Citites_Processing, by = c("City" = "City", "State" = "State", "Country" = "Country"))
+
+
+dim(Orders_Processing)
+
+sum(is.na(Orders_Processing))
+
+```
+
+## Merging Data Frames: Orders_Processing with Demographics
+
+```{r}
+unique_states_orders_processing <- unique(Orders_Processing$State)
+unique_states_demographics <- unique(Demographics_Processing$State)
+
+# Find states present in Orders_Processing but not in Demographics
+missing_states <- setdiff(unique_states_orders_processing, unique_states_demographics)
+
+# Print the states that are missing
+print(missing_states)
+
+dim(Orders_Processing)
+dim(Demographics_Processing)
+
+# Perform the left join
+Orders_Processing <- Orders_Processing %>%
+    left_join(Demographics_Processing, by = "State")
+
+dim(Orders_Processing)
+
+sum(is.na(Orders_Processing))
+```
+
+# Analysis and Manipulation of the Merged Dataset
+
+## Country Column
+
+```{r}
+# Unique values in the Country column
+unique(Orders_Processing$Country)
+
+# Add observations with Italy values into another dataset
+Orders_Wrong_Entries <- Orders_Processing[Orders_Processing$Country == "Italy", ]
+
+# Drop the observations with Italy values from the original dataset
+Orders_Processing <- Orders_Processing[Orders_Processing$Country != "Italy", ]
+```
+
+## City Column
+
+```{r}
+# World Cities new dataset
+cities_verification <- World_Cities
+# Orders Analysis new dataset
+orders_cities_verifiction <- Orders_Processing
+
+# Filter columns
+cities_verification <- cities_verification[, c("City", "City_ID")]
+
+# Check for duplicates in id
+sum(duplicated(cities_verification$id))
+
+# Check for duplicates in City
+sum(duplicated(cities_verification$City))
+
+length(unique(orders_cities_verifiction$City))
+
+# Find unique city names in Orders_Processing
+unique_cities_orders <- unique(orders_cities_verifiction$City)
+
+# Check if each unique city in Orders_Processing is in cities_verification
+city_check <- unique_cities_orders %in% cities_verification$City
+
+# Create a data frame to see the result
+city_comparison <- data.frame(
+    City = unique_cities_orders,
+    IsInUS = city_check
+)
+
+# Count the cities that are not in the US
+sum(city_comparison$IsInUS == FALSE)
+
+print(city_comparison[city_comparison$IsInUS == FALSE, ])
+
+```
+
+## State Column
+
+```{r}
+# Unique values in the State column
+unique(Orders_Processing$State)
+length(unique(Orders_Processing$State))
+
+# Count how many orders are from District of Columbia
+sum(Orders_Processing$State == "District of Columbia")
+
+# Typically District of Columbia is not a state but a federal district commonly referred to as Washington D.C., is the capital of the United States
+# But in our case we will keep it as a state
+
+Orders_Processing %>%
+    group_by(State) %>%
+    summarise(num_orders = n()) %>%
+    arrange(desc(num_orders)) %>%
+    ggplot(aes(x = reorder(State, num_orders), y = num_orders)) +
+    geom_point(stat="identity", color = "#9631ee", size = 1) +  # Using points instead of bars
+    coord_flip() +  # Flips the axes to make the plot horizontal
+    # Adjust position and size as needed
+    labs(
+        title = "Number of Orders per State",
+        x = "State",
+        y = "Number of Orders"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.y = element_text(size = 8)  # Adjust text size for readability
+    )
+
+```
+
+## Postal_Code Column
+
+```{r}
+# Unique values in the Postal_Code column
+length(unique(Orders_Processing$Postal_Code))
+
+# Function to count the number of digits in a postal code
+count_digits <- function(postal_code) {
+    # Remove non-digit characters and calculate the length of the remaining string
+    nchar(gsub("[^0-9]", "", postal_code))
+}
+
+# Apply the function to the Postal_Code column
+digit_count_postal <- sapply(Orders_Processing$Postal_Code, count_digits)
+
+# Creating a frequency table of the digit counts
+frequency_table_postal <- table(digit_count_postal)
+
+# Print the frequency table
+print(frequency_table_postal)
+
+# Create a new dataset with the 4 digit postal codes
+Orders_Processing_4digits <- Orders_Processing[digit_count_postal == 4, ]
+
+# Check the dimensions of the new dataset
+dim(Orders_Processing_4digits)
+
+# Check the unique values in the State column
+unique(Orders_Processing_4digits$State)
+
+# Check the unique values in the City column
+unique(Orders_Processing_4digits$City)
+
+```
+
+## Region column
+
+```{r}
+# Unique values in the Region column
+(unique(Orders_Processing$Region))
+
+Orders_Processing %>%
+    group_by(Region) %>%
+    summarise(
+        num_orders = n()
+    ) %>%
+    arrange(desc(num_orders)) %>%
+    ggplot(aes(x = reorder(Region, num_orders), y = num_orders)) +
+    geom_bar(stat = "identity", fill = "#196012", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_orders), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Orders per Region",
+        x = "Region",
+        y = "Number of Orders"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+```
+
+## Discount Column
+
+```{r}
+# Check for negative values in the Discount column
+sum(Orders_Processing$Discount < 0)
+
+# Check for values above 100 in the Discount column
+sum(Orders_Processing$Discount > 100)
+
+# Check the unique values in the Discount column
+unique(Orders_Processing$Discount)
+
+# Create a frequency table for the Discount column
+frequency_table_discount <- table(Orders_Processing$Discount)
+
+# Print the frequency table
+print(frequency_table_discount)
+
+# print the values with  1.4  1.6
+Orders_Processing[Orders_Processing$Discount == 1.4, ]
+Orders_Processing[Orders_Processing$Discount == 1.6, ]
+
+# Change the Observations
+Orders_Processing <- Orders_Processing %>%
+    mutate(Discount = case_when(
+        Discount == 1.4 ~ 0.4,
+        Discount == 1.6 ~ 0.6,
+        TRUE ~ Discount
+    ))
+
+
+# Check the unique values in the Discount column
+unique(Orders_Processing$Discount)
+
+Orders_Processing %>%
+    group_by(Discount) %>%
+    summarise(
+        num_orders = n()
+    ) %>%
+    arrange(desc(num_orders)) %>%
+    ggplot(aes(x = reorder(Discount, num_orders), y = num_orders)) +
+    geom_bar(stat = "identity", fill = "#dc1f1f", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_orders), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Orders with each Discount Code",
+        x = "Discount",
+        y = "Number of Orders"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+```
+
+## Quantity Column
+
+```{r}
+# Plot Quantity count
+Orders_Processing %>%
+    group_by(Quantity) %>%
+    summarise(
+        num_orders = n()
+    ) %>%
+    arrange(desc(num_orders)) %>%
+    ggplot(aes(x = reorder(Quantity, num_orders), y = num_orders)) +
+    geom_bar(stat = "identity", fill = "#9631ee", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_orders), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Orders per Qunatity",
+        x = "Quantity",
+        y = "Number of Orders"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+# Print the dataset with the observation where quantity is 19
+Orders_Processing[Orders_Processing$Quantity == 19, ]
+
+# Put it in the Orders_Wrong_Entries df
+Orders_Wrong_Entries <- rbind(Orders_Wrong_Entries, Orders_Processing[Orders_Processing$Quantity == 19, ])
+
+# Drop it from the original dataset
+Orders_Processing <- Orders_Processing[Orders_Processing$Quantity != 19, ]
+
+# We drop it beacause sales are 0,0002
+
+```
+
+## Sales Column
+
+```{r}
+# Check for negative values in the Sales column
+sum(Orders_Processing$Sales < 0)
+
+# Check for values above 100 000 in the Sales column
+sum(Orders_Processing$Sales > 1000000)
+
+# Check for values above 10 000 in the Sales column
+sum(Orders_Processing$Sales > 10000)
+
+# Max value in the Sales column
+max(Orders_Processing$Sales)
+
+# Min value in the Sales column
+min(Orders_Processing$Sales)
+
+# Min and Max values are okay
+
+# Creating a time series plot
+ggplot(Orders_Processing, aes(x = Order_Date, y = Sales)) +
+    geom_line() +  # Line plot
+    labs(title = "Sales Over Time",
+         x = "Date",
+         y = "Total Sales") +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+```
+
+## Profit Column
+
+```{r}
+# Check for negative values in the Profit column
+sum(Orders_Processing$Profit < 0)
+
+# Check for values above 100 000 in the Profit column
+sum(Orders_Processing$Profit > 100000)
+
+# Check for values above 10 000 in the Profit column
+sum(Orders_Processing$Profit > 10000)
+
+# Check for values above 22638.48 in the Profit column
+sum(Orders_Processing$Profit > 22638.48)
+
+# Max value in the Profit column
+max(Orders_Processing$Profit)
+
+# Min value in the Profit column
+min(Orders_Processing$Profit)
+
+# Add the observations with profit more than 22638.48 to the Orders_Wrong_Entries df
+Orders_Wrong_Entries <- rbind(Orders_Wrong_Entries, Orders_Processing[Orders_Processing$Profit > 22638.48, ])
+
+# We are putting all the observations with value above 22638.48 in the Orders_Wrong_Entries df
+
+# Drop the observations with profit more than 22638.48 from the original dataset
+Orders_Processing <- Orders_Processing[Orders_Processing$Profit <= 22638.48, ]
+
+# Because profit can't be higher than sales
+
+# Creating a time series plot
+ggplot(Orders_Processing, aes(x = Order_Date, y = Profit)) +
+    geom_line() +  # Line plot
+    labs(title = "Sales Over Time",
+         x = "Date",
+         y = "Total Sales") +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+```
+
+# Products Analysis and Manipulation
+
+```{r}
+
+# Counting the unique values in the Product_ID and Product_Name columns
+length(unique(Orders_Processing$Product_ID))
+length(unique(Orders_Processing$Product_Name))
+
+# Counting the duplicate values in the Product_ID and Product_Name columns
+sum(duplicated(Orders_Processing$Product_ID))
+sum(duplicated(Orders_Processing$Product_Name))
+
+# Counting the unique values in the Product_ID
+length(unique(Orders_Processing$Product_ID))
+length(unique(Orders_Processing$Product_Name))
+
+# Counting the duplicate values in the Product_ID
+sum(duplicated(Orders_Processing$Product_ID))
+sum(duplicated(Orders_Processing$Product_Name))
+
+
+# Inspecting the duplicated rows in the Product_Name column
+Orders_Processing %>%
+    group_by(Product_Name) %>%
+    summarise(
+        num_duplicate_rows = n()
+    ) %>%
+    arrange(desc(num_duplicate_rows))
+
+# Create a new data frame with the duplicated rows and their pairs
+Products_Questionable <- Orders_Processing %>%
+    group_by(Product_Name) %>%
+    filter(n() > 1)
+
+# Plotting products per category
+Orders_Processing %>%
+    group_by(Category) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Category, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#69b3a2", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Products per Category",
+        x = "Category",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+```
+
+## Plotting Products per each Category
+
+```{r}
+
+# Plotting products per category
+unique(Orders_Processing$Category)
+
+
+# Technology
+Orders_Processing %>%
+    filter(Category == "Technology") %>%
+    group_by(Sub_Category) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Sub_Category, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#dadd1b", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Technology",
+        subtitle = "Number of Products per Sub_Category",
+        x = "Sub_Category",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+# Office Supplies
+Orders_Processing %>%
+    filter(Category == "Office Supplies") %>%
+    group_by(Sub_Category) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Sub_Category, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#47d261", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Office Supplies",
+        subtitle = "Number of Products per Sub_Category",
+        x = "Sub_Category",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+# Furniture
+Orders_Processing %>%
+    filter(Category == "Furniture") %>%
+    group_by(Sub_Category) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Sub_Category, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#ff6905", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Furniture",
+        subtitle = "Number of Products per Sub_Category",
+        x = "Sub_Category",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+```
+
+## Fix the issue with test values
+
+```{r}
+# Count the Test values in Orders Processing df
+sum(Orders_Processing$Sub_Category == "Test")
+
+dim(Orders_Processing)
+
+# Add Test value from sub-category column to Wrong_Entries df
+Orders_Wrong_Entries <- rbind(Orders_Wrong_Entries, Orders_Processing[Orders_Processing$Sub_Category == "Test", ])
+
+# Drop Test value from sub-category column
+Orders_Processing <- Orders_Processing[Orders_Processing$Sub_Category != "Test", ]
+
+# Count the Test values in Orders Processing df
+sum(Orders_Processing$Sub_Category == "Test")
+
+dim(Orders_Processing)
+```
+
+# Returns
+
+```{r}
+Orders_Processing %>%
+    group_by(Returned) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Returned, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#5b8eb7", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Returned vs Not Returned Products",
+        x = "Returned",
+        y = "Number of Orders"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+```
+
+# Extracting Data From Order Date and Shipping Date
+
+## Extracting the year
+
+```{r}
+# Extract the year and add it as a new column in the new dataset
+Orders_Processing$Year <- as.numeric(format(Orders_Processing$Order_Date, "%Y"))
+
+# View the new data frame
+unique(Orders_Processing$Year)
+
+# 2016 is missing from the data set
+
+Orders_Processing %>%
+    group_by(Year) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Year, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#0c70e3", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Products sold per year",
+        x = "Year",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+
+```
+
+## Extracting the month
+
+```{r}
+# Extract the month and add it as a new column in the new dataset
+Orders_Processing$Month <- as.numeric(format(Orders_Processing$Order_Date, "%m"))
+
+# Print the unique values in the Month column
+unique(Orders_Processing$Month)
+
+Orders_Processing %>%
+    group_by(Month) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Month, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#7ed2e9", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Products sold per month",
+        x = "Month",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+
+```
+
+## Extracting the day
+
+```{r}
+
+
+# Extract the day and add it as a new column in the new dataset
+Orders_Processing$Day <- as.numeric(format(Orders_Processing$Order_Date, "%d"))
+
+# Print the unique values in the Day column
+unique(Orders_Processing$Day)
+
+# Plotting the number of orders per day
+Orders_Processing %>%
+    group_by(Day) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Day, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#0c9fe3", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Products sold per day",
+        x = "Day",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+
+```
+
+## Extracting the week-day
+
+```{r}
+Orders_Processing$Day_of_Week <- weekdays(Orders_Processing$Order_Date)
+
+# Unique values in the Day_of_Week column
+unique(Orders_Processing$Day_of_Week)
+
+# Plotting the number of orders per day of the week
+Orders_Processing %>%
+    group_by(Day_of_Week) %>%
+    summarise(
+        num_products = n()
+    ) %>%
+    arrange(desc(num_products)) %>%
+    ggplot(aes(x = reorder(Day_of_Week, num_products), y = num_products)) +
+    geom_bar(stat = "identity", fill = "#7e95e9", width = 0.7, color = "black") + # Color and bar adjustments
+    geom_text(aes(label = num_products), vjust = -0.3, size = 3.5) + # Data labels
+    labs(
+        title = "Number of Products sold each day of the week",
+        x = "Day of The Week",
+        y = "Number of Products"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+
+```
+
+# Calculating Processing Days
+
+```{r}
+### Calucalate processing days based on Order_Date and Ship_Date
+
+# Calculate the distance between the Order_Date and Ship_Date
+Orders_Processing$Processing_Days <- as.numeric(difftime(Orders_Processing$Ship_Date, Orders_Processing$Order_Date, units = "days"))
+
+unique(Orders_Processing$Processing_Days)
+
+# Summarize the data
+processing_days_count <- Orders_Processing %>%
+    group_by(Processing_Days = factor(Processing_Days)) %>%
+    summarise(Count = n()) %>%
+    mutate(
+        Fraction = Count / sum(Count),
+        Label = paste0(Processing_Days, " (", scales::percent(Fraction), ")")
+    )
+
+# Create the pie chart
+ggplot(processing_days_count, aes(x = "", y = Count, fill = Label)) +
+    geom_bar(width = 1, stat = "identity") +
+    coord_polar("y", start = 0) +
+    labs(
+        title = "Distribution of Processing Days",
+        x = NULL,
+        y = NULL,
+        fill = "Processing Days"
+    ) +
+    theme_void() +
+    theme(legend.position = "right")
+
+
+```
+
+# Calculating Net Sales and Unit Prices
+
+```{r}
+# Calculate Net Sales and Unit Price
+Orders_Processing <- Orders_Processing %>%
+    mutate(
+        Net_Sales = Sales - (Sales * Discount), # Calculate Net Sales
+        Unit_Price = Net_Sales / Quantity # Calculate Unit Price
+    )
+
+# Plot a boxplot of the product prices and day of the week
+Orders_Processing %>%
+    ggplot(aes(x = Day_of_Week, y = Unit_Price)) +
+    geom_boxplot(fill = "#e63a3a", color = "black") +
+    labs(
+        title = "Product Prices per Day of the Week",
+        x = "Day of the Week",
+        y = "Product Price"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12)
+    )
+
+# Print the obseravtions with product price less than 0
+Orders_Processing[Orders_Processing$Unit_Price < 0, ]
+
+# Count the observations with product price less than 0
+sum(Orders_Processing$Unit_Price < 0)
+
+# min values in the UnitPrice column
+min(Orders_Processing$Unit_Price)
+
+# max values in the UnitPrice column
+max(Orders_Processing$Unit_Price)
+
+dim(Orders_Processing)
+```
+
+# Calculating Avg, Min, Max unit price
+
+```{r}
+
+Orders_Processing <- Orders_Processing %>%
+    group_by(Product_ID, Year) %>%
+    mutate(
+        Average_Unit_Price = mean(Unit_Price, na.rm = TRUE),
+        Max_Unit_Price = max(Unit_Price, na.rm = TRUE),
+        Min_Unit_Price = min(Unit_Price, na.rm = TRUE)
+    ) %>%
+    ungroup()
+
+length(unique(Orders_Processing$Average_Unit_Price))
+
+length(unique(Orders_Processing$Max_Unit_Price))
+
+length(unique(Orders_Processing$Min_Unit_Price))
+
+dim(Orders_Processing)
+
+colnames(Orders_Processing)
+
+```
+
+# Calculating Total Order Price and Profit
+
+```{r}
+Orders_Processing <- Orders_Processing %>%
+    group_by(Order_ID) %>%
+    mutate(
+        Total_Order_Price = sum(Net_Sales, na.rm = TRUE), # Total Net Sales per order
+        Total_Order_Profit = sum(Profit, na.rm = TRUE) # Total Profit per order
+    ) %>%
+    ungroup()
+
+length(unique(Orders_Processing$Order_ID))
+length(unique(Orders_Processing$Total_Order_Price))
+
+sum(is.na(Orders_Processing))
+
+dim(Orders_Processing)
+
+colnames(Orders_Processing)
+
+# Call the function that we created to check for NA values
+check_na(Orders_Processing)
+```
+
+# Wrong Data Entry Report
+
+```{r}
+head(Orders_Wrong_Entries)
+
+check_na(Orders_Wrong_Entries)
+```
+
+---
+title: "Product Analysis"
+author: "Boris Borislavov Ivanov"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+`{knitr::opts_chunk$set(echo = TRUE)}`
+
+# Index
+
+-   Understanding the Categories
+-   Analysing the significant outliers
+
+# Load Libraries and data
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(readr)
+library(tidyr)
+
+# Loading the dataset that we wrote after processing the data
+data <- read_csv("/Users/hugogonzalez/Desktop/BIDA /DATA ANALISYS /Orders_Processing.csv")
+
+colnames(data)
+```
+
+# Dropping Columns
+
+```{r}
+data <- data %>%
+    select(-c(Order_Date, Ship_Date, Ship_Mode, Customer_ID, Customer_Name, Growth2021, Population2010, GrowthSince2010, Percentage, Density, City_ID, Rank, Population2021, Total_Order_Price, Total_Order_Profit))
+
+colnames(data)
+```
+
+# Understanding the categories
+
+```{r}
+data %>%
+    ggplot(aes(x = Category, y = Average_Unit_Price, color = Category)) +
+    geom_boxplot(outlier.color = "#ff0000") +
+    ggtitle("Avarager product price per category") +
+    xlab("Category") +
+    ylab("Average Unit Price") +
+    scale_color_brewer(palette = "Set1") +
+    theme_minimal()
+```
+
+-   We can see from the plot that the pricing of the product in every category is very different
+-   There are high ticket and low ticket products.
+-   Technology products contain the most expensive product.
+-   The presence of outliers only on the higher side suggests a right-skewed (or positively skewed) distribution.
+-   The bulk of our data is concentrated towards the lower end.
+-   This way it is a little bit hard to understand what really is going on so let's plot it per sub-category.
+
+## Plotting The Sub Categories
+
+### Technology
+
+```{r}
+data %>%
+    filter(Category == "Technology") %>%
+    ggplot(aes(x = Sub_Category, y = Average_Unit_Price, color = Sub_Category)) +
+    geom_boxplot(outlier.color = "black") +
+    ggtitle("Technology") +
+    xlab("Sub_Category") +
+    ylab("Average Unit Price") +
+    scale_color_brewer(palette = "Set1") +
+    theme_minimal()
+```
+
+-   We can see from the dots that there are outliers in every sub-category.
+-   The subcategory with the most significant outliers is the Copiers one.
+-   Copiers is the most expensive one with lowest value higher than the median of most.
+-   The median value in all sub-categories is bellow 500.
+-   Most of the values are between the 25th and 75th percentile.
+
+### Office Supplies
+
+```{r}
+data %>%
+    filter(Category == "Office Supplies") %>%
+    ggplot(aes(x = Sub_Category, y = Average_Unit_Price, color = Sub_Category)) +
+    geom_boxplot(outlier.color = "black") +
+    ggtitle("Office Supplies") +
+    xlab("Sub_Category") +
+    ylab("Average Unit Price") +
+    scale_color_brewer(palette = "Set1") +
+    theme_minimal()
+```
+
+-   This Category contains the most number of sub-categories.
+-   We can see from the dots that there are outliers in every sub-category.
+-   The sub-category with the highest outliers is binders followed by supplies.
+-   The median value in all sub-categories is below 250
+-   
+
+### Furniture
+
+```{r}
+data %>%
+    filter(Category == "Furniture") %>%
+    ggplot(aes(x = Sub_Category, y = Average_Unit_Price, color = Sub_Category)) +
+    geom_boxplot(outlier.color = "black") +
+    ggtitle("Furniture") +
+    xlab("Sub_Category") +
+    ylab("Average Unit Price") +
+    scale_color_brewer(palette = "Set1") +
+    theme_minimal()
+```
+
+-   There are outliers in every sub-category
+-   The median value in all sub-categories is below 200
+-   The most significant outliers is in Bookcases
+
+##### Conclusion of the findings: While there are a lot of outliers in every sub-category we can't just take them out the analysis becuase we will lose valuable information. The outliers represent products that have higher prices than the rest of the products in the sub-category. The outliers make the results harder to interpret. So we will classify the products and see how things go. This allows us to draw conclusions that are specific to each segment and not skewed by outliers.
+
+# Analysing products pricing
+
+## Plotting Cateogies per year
+
+```{r}
+  ggplot(data, aes(x=Category, y= Average_Unit_Price, color = Category)) +
+  geom_boxplot(outlier.color = "black") +
+  facet_wrap(~ Year, scales = "fixed", nrow = 3,) +
+  ggtitle("Avarage Unit Price by Category") +
+  xlab("Category") +
+  ylab("Average Unit Price") +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal()
+```
+
+-   The years 2014 and 2015 have outliers that are closer to the median compared to 2016 and 2017
+-   2017 has the most significant product above the 3000 mark
+-   After 2014 we can see that the products in Office Supplies are getting closer to the median
+
+## Classifying the products
+
+```{r}
+# Creating the Classification
+data <- data %>%
+    mutate(Price_Range_Category = case_when(
+        Average_Unit_Price > 1000 ~ "Above 1000",
+        Average_Unit_Price > 500 & Average_Unit_Price <= 1000 ~ "500-1000",
+        Average_Unit_Price > 400 & Average_Unit_Price <= 500 ~ "400-500",
+        Average_Unit_Price > 300 & Average_Unit_Price <= 400 ~ "300-400",
+        Average_Unit_Price > 250 & Average_Unit_Price <= 300 ~ "250-300",
+        Average_Unit_Price > 200 & Average_Unit_Price <= 250 ~ "200-250",
+        Average_Unit_Price > 150 & Average_Unit_Price <= 200 ~ "150-200",
+        Average_Unit_Price > 100 & Average_Unit_Price <= 150 ~ "100-150",
+        Average_Unit_Price > 50 & Average_Unit_Price <= 100 ~ "50-100",
+        Average_Unit_Price > 25 & Average_Unit_Price <= 50 ~ "25-50",
+        Average_Unit_Price > 10 & Average_Unit_Price <= 25 ~ "10-25",
+        Average_Unit_Price > 5 & Average_Unit_Price <= 10 ~ "5-10",
+        Average_Unit_Price > 0 & Average_Unit_Price <= 5 ~ "0-5",
+        TRUE ~ "Other" # Catch-all for any unexpected cases
+    ))
+```
+
+## Calculating Yearly Statistics for Each Price Range Classification
+
+```{r}
+aggregated_data <- data %>%
+    group_by(Year, Price_Range_Category) %>%
+    summarise(
+        Total_Orders = n(), # Count total number of orders
+        Total_Gross_Revenue = sum(Sales, na.rm = TRUE), # Sum total sales
+        Total_Net_Revenue = sum(Net_Sales, na.rm = TRUE), # Sum total net sales
+        Total_Profit = sum(Profit, na.rm = TRUE), # Sum total profit
+        Total_Products = n_distinct(Product_ID), # Count unique products
+        Total_Number_of_Returns = sum(Returned == "Yes", na.rm = TRUE), # Count total number of returns
+        Order_After_Returns = n() - sum(Returned == "Yes", na.rm = TRUE), # Count total number of orders after returns
+        Gross_Revenue_After_Returns = sum(Sales, na.rm = TRUE) - sum(Sales[Returned == "Yes"], na.rm = TRUE), # Sum total sales after returns
+        Net_Revenue_After_Returns = sum(Net_Sales, na.rm = TRUE) - sum(Net_Sales[Returned == "Yes"], na.rm = TRUE), # Sum total net sales after returns
+        Profit_After_Returns = sum(Profit, na.rm = TRUE) - sum(Profit[Returned == "Yes"], na.rm = TRUE), # Sum total profit after returns
+        Avg_Unit_Price_Category = mean(Average_Unit_Price, na.rm = TRUE), # Average unit price
+        Avg_Discount = mean(Discount, na.rm = TRUE), # Average discount
+        Avg_Quantity = mean(Quantity, na.rm = TRUE), # Average quantity
+        .groups = "drop"
+    )
+
+head(aggregated_data)
+```
+
+## Total Orders During the years for Price Ranges Between Above 1000 and 250-300
+
+```{r}
+aggregated_data %>%
+    filter(Price_Range_Category == "Above 1000" | Price_Range_Category == "500-1000" | Price_Range_Category == "400-500" | Price_Range_Category == "300-400" | Price_Range_Category == "250-300") %>%
+    ggplot(aes(x = Year, y = Total_Orders, group = Price_Range_Category, color = Price_Range_Category)) +
+    geom_line() +
+    theme_minimal() +
+    labs(title = "Total Orders by Year and Price Range", x = "Year", y = "Total Orders")
+
+```
+
+## Total Orders During the years for Price Ranges Between 200-250 and 100-150
+
+```{r}
+aggregated_data %>%
+    filter(Price_Range_Category == "200-250" | Price_Range_Category == "150-200" | Price_Range_Category == "100-150") %>%
+    ggplot(aes(x = Year, y = Total_Orders, group = Price_Range_Category, color = Price_Range_Category)) +
+    geom_line() +
+    theme_minimal() +
+    labs(title = "Total Orders by Year and Price Range", x = "Year", y = "Total Orders")
+
+```
+
+## Total Orders During the years for Price Ranges Between 50-100 and 0-5
+
+```{r}
+aggregated_data %>%
+    filter(Price_Range_Category == "50-100" | Price_Range_Category == "25-50" | Price_Range_Category == "10-25" | Price_Range_Category == "5-10" | Price_Range_Category == "0-5") %>%
+    ggplot(aes(x = Year, y = Total_Orders, group = Price_Range_Category, color = Price_Range_Category)) +
+    geom_line() +
+    theme_minimal() +
+    labs(title = "Total Orders by Year and Price Range", x = "Year", y = "Total Orders")
+
+```
+
+## Total Number of Orders and Returns
+
+### Reshaping the data
+
+```{r}
+long_data_orders_returns <- aggregated_data %>%
+    pivot_longer(
+        cols = c(Total_Orders, Total_Number_of_Returns),
+        names_to = "Metric",
+        values_to = "Value"
+    ) %>%
+    mutate(Metric = factor(Metric, levels = c("Total_Orders", "Total_Number_of_Returns")))
+
+```
+
+### 2014
+
+```{r}
+ggplot(long_data_orders_returns %>% filter(Year == 2014), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+  geom_text(aes(label = Value), vjust = -0.3, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Total_Orders" = "#13b4d1", "Total_Number_of_Returns" = "#f14b4e")) +
+  theme_minimal() +
+  labs(
+    title = "Total Number of Orders and Returns for Each Price Range in 2014",
+    x = "Price Range Category",
+    y = "Total"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### 2015
+
+```{r}
+ggplot(long_data_orders_returns %>% filter(Year == 2015), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+  geom_text(aes(label = Value), vjust = -0.3, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Total_Orders" = "#13b4d1", "Total_Number_of_Returns" = "#f14b4e")) +
+  theme_minimal() +
+  labs(
+    title = "Total Number of Orders and Returns for Each Price Range in 2015",
+    x = "Price Range Category",
+    y = "Total"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### 2016
+
+```{r}
+ggplot(long_data_orders_returns %>% filter(Year == 2016), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+  geom_text(aes(label = Value), vjust = -0.3, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Total_Orders" = "#13b4d1", "Total_Number_of_Returns" = "#f14b4e")) +
+  theme_minimal() +
+  labs(
+    title = "Total Number of Orders and Returns for Each Price Range in 2016",
+    x = "Price Range Category",
+    y = "Total"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### 2017
+
+```{r}
+ggplot(long_data_orders_returns %>% filter(Year == 2017), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+  geom_text(aes(label = Value), vjust = -0.3, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Total_Orders" = "#13b4d1", "Total_Number_of_Returns" = "#f14b4e")) +
+  theme_minimal() +
+  labs(
+    title = "Total Number of Orders and Returns for Each Price Range in 2017",
+    x = "Price Range Category",
+    y = "Total"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Percentages of Non Returned vs Returned
+
+```{r}
+order_summary <- data %>%
+    group_by(Returned) %>%
+    summarise(Count = n(), .groups = "drop") %>%
+    mutate(Percentage = Count / sum(Count) * 100)
+
+ggplot(order_summary, aes(x = "", y = Count, fill = factor(Returned))) +
+    geom_bar(width = 1, stat = "identity") +
+    coord_polar(theta = "y") +
+    geom_text(aes(label = paste0(round(Percentage, 1), "%")),
+        position = position_stack(vjust = 0.5)
+    ) +
+    scale_fill_manual(
+        values = c("#13b4d1", "#f14b4e"),
+        labels = c("Not Returned", "Returned"),
+        name = "Order Status"
+    ) +
+    labs(
+        title = "Proportion of Returned vs Non-Returned Orders",
+        x = NULL,
+        y = NULL
+    ) +
+    theme_minimal() +
+    theme(
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_text(size = 10)
+    )
+
+```
+
+### Correlation Table of Year, Price Range and Total_Number of Orders
+
+```{r}
+ggplot(aggregated_data, aes(x = Year, y = Price_Range_Category, fill = Total_Orders)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = Total_Orders), color = "black", size = 3, vjust = 1) +
+    scale_fill_gradient2(low = "#00ff9d", high = "#0011ff", mid = "#117dd0", midpoint = median(aggregated_data$Total_Orders), space = "Lab") +
+    theme_minimal() +
+    theme(
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+    ) +
+    labs(title = "Heatmap of Total Number of Orders by Year and Price Range", x = "Year", y = "Price Range Category")
+
+```
+
+### Correlation Table of Year, Price Range and Total_Number of Returns
+
+```{r}
+ggplot(aggregated_data, aes(x = Year, y = Price_Range_Category, fill = Total_Number_of_Returns)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = Total_Number_of_Returns), color = "black", size = 3, vjust = 1) +
+    scale_fill_gradient2(low = "#fffb00", high = "red", mid = "red", midpoint = median(aggregated_data$Total_Orders), space = "Lab") +
+    theme_minimal() +
+    theme(
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+    ) +
+    labs(title = "Heatmap of Total Number of Orders by Year and Price Range", x = "Year", y = "Price Range Category")
+```
+
+## Gross_Revenue_After Returns
+
+```{r}
+ggplot(aggregated_data, aes(x = Year, y = Gross_Revenue_After_Returns, fill = Price_Range_Category)) + 
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_wrap(~Price_Range_Category, ncol = 3) +
+    theme_minimal() +
+    labs(title = "Gross Revenue After Returns by Year and Price Range", x = "Year", y = "Gross Revenue After Returns")
+
+```
+
+## Net Revenue and Profit
+
+### Reshaping the Data
+
+```{r}
+
+long_data_netrev_profit <- aggregated_data %>%
+    pivot_longer(
+        cols = c(Net_Revenue_After_Returns, Profit_After_Returns),
+        names_to = "Metric",
+        values_to = "Value"
+    ) %>%
+    mutate(Metric = factor(Metric, levels = c("Net_Revenue_After_Returns", "Profit_After_Returns")))
+
+```
+
+### 2014
+
+```{r}
+ggplot(long_data_netrev_profit %>% filter(Year == 2014), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+    scale_fill_manual(values = c("Net_Revenue_After_Returns" = "#4a4ced", "Profit_After_Returns" = "#3a902b")) +
+    theme_minimal() +
+    labs(
+        title = "Net Sales and Profit in 2014",
+        x = "Price Range Category",
+        y = "Total"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### 2015
+
+```{r}
+ggplot(long_data_netrev_profit %>% filter(Year == 2015), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+    scale_fill_manual(values = c("Net_Revenue_After_Returns" = "#4a4ced", "Profit_After_Returns" = "#3a902b")) +
+    theme_minimal() +
+    labs(
+        title = "Net Sales and Profit in 2015",
+        x = "Price Range Category",
+        y = "Total"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### 2016
+
+```{r}
+ggplot(long_data_netrev_profit %>% filter(Year == 2016), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+    scale_fill_manual(values = c("Net_Revenue_After_Returns" = "#4a4ced", "Profit_After_Returns" = "#3a902b")) +
+    theme_minimal() +
+    labs(
+        title = "Net Sales and Profit in 2016",
+        x = "Price Range Category",
+        y = "Total"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### 2017
+
+```{r}
+ggplot(long_data_netrev_profit %>% filter(Year == 2017), aes(x = Price_Range_Category, y = Value, fill = Metric)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9), color = "black") +
+    scale_fill_manual(values = c("Net_Revenue_After_Returns" = "#4a4ced", "Profit_After_Returns" = "#3a902b")) +
+    theme_minimal() +
+    labs(
+        title = "Net Sales and Profit in 2017",
+        x = "Price Range Category",
+        y = "Total"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Total Orders vs Average Unit Price by Price Range During The Years
+
+```{r}
+ggplot(aggregated_data, aes(x = Avg_Unit_Price_Category, y = Order_After_Returns, color = Price_Range_Category)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Total Orders vs Average Unit Price", x = "Average Unit Price", y = "Total Orders")
+```
+
+## Total Revenue vs Average Unit Price by Price Range During The Years
+
+```{r}
+ggplot(aggregated_data, aes(x = Avg_Unit_Price_Category, y = Net_Revenue_After_Returns, color = Price_Range_Category)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Total Orders vs Average Unit Price", x = "Average Unit Price", y = "Total Orders")
+```
+
+## Total Profit vs Average Unit Price by Price Range During The Years
+
+```{r}
+ggplot(aggregated_data, aes(x = Avg_Unit_Price_Category, y = Profit_After_Returns, color = Price_Range_Category)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Total Orders vs Average Unit Price", x = "Average Unit Price", y = "Total Orders")
+```
+
+## Avg_Discount vs Average Unit Price by Price Range During The Years
+
+```{r}
+ggplot(aggregated_data, aes(x = Avg_Unit_Price_Category, y = Avg_Discount, color = Price_Range_Category)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Total Orders vs Average Unit Price", x = "Average Unit Price", y = "Total Orders")
+```
+
+## Avg_Quantity vs Average Unit Price by Price Range During The Years
+
+```{r}
+ggplot(aggregated_data, aes(x = Avg_Unit_Price_Category, y = Avg_Quantity, color = Price_Range_Category)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Total Orders vs Average Unit Price", x = "Average Unit Price", y = "Total Orders")
+```
+
+# Category and Sub_Category Analysis
+
+## Aggregating the data
+
+```{r}
+aggregated_data_subcategory <- data %>%
+    mutate(Price_Range_Category = factor(Price_Range_Category,
+        levels = c("0-5", "5-10", "10-25", "25-50", "50-100", "100-150", "150-200", "200-250", "250-300", "300-400", "400-500", "500-1000", "Above 1000"), # Add your price ranges here in order
+        ordered = TRUE
+    )) %>%
+    group_by(Year, Price_Range_Category, Category, Sub_Category) %>%
+    summarise(Total_Orders = n(), .groups = "drop")
+```
+
+## Total Orders
+
+### Category
+
+#### Low price ranges
+
+```{r}
+aggregated_data_subcategory %>%
+    filter(Price_Range_Category == "50-100" | Price_Range_Category == "25-50" | Price_Range_Category == "10-25" | Price_Range_Category == "5-10" | Price_Range_Category == "0-5") %>%
+    ggplot(aes(x = Category, y = Total_Orders, fill = Category)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 5) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders by Category, and Price Range across Years",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+#### Middle Price Ranges
+
+```{r}
+aggregated_data_subcategory %>%
+    filter(Price_Range_Category == "200-250" | Price_Range_Category == "150-200" | Price_Range_Category == "100-150") %>%
+    ggplot(aes(x = Category, y = Total_Orders, fill = Category)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 5) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders by Category, and Price Range across Years",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+#### High Price Ranges
+
+```{r}
+aggregated_data_subcategory %>%
+    filter(Price_Range_Category == "Above 1000" |
+             Price_Range_Category == "500-1000" |
+             Price_Range_Category == "400-500" |
+             Price_Range_Category == "300-400" |
+             Price_Range_Category == "250-300") %>%
+    ggplot(aes(x = Category, y = Total_Orders, fill = Category)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 5) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders by Category, and Price Range across Years",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Sub_Category
+
+#### Technology
+
+##### Low Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Technology" &
+            (Price_Range_Category == "50-100" |
+                Price_Range_Category == "25-50" |
+                Price_Range_Category == "10-25" |
+                Price_Range_Category == "5-10" |
+                Price_Range_Category == "0-5")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### Mid Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Technology" &
+            (Price_Range_Category == "200-250" |
+               Price_Range_Category == "150-200" |
+               Price_Range_Category == "100-150")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### High Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Technology" &
+            (Price_Range_Category == "Above 1000" |
+               Price_Range_Category == "500-1000" |
+               Price_Range_Category == "400-500" |
+               Price_Range_Category == "300-400" |
+               Price_Range_Category == "250-300")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+#### Office Supplies
+
+##### Low Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Office Supplies" &
+            (Price_Range_Category == "50-100" |
+                Price_Range_Category == "25-50" |
+                Price_Range_Category == "10-25" |
+                Price_Range_Category == "5-10" |
+                Price_Range_Category == "0-5")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### Mid Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Office Supplies" &
+            (Price_Range_Category == "200-250" |
+               Price_Range_Category == "150-200" |
+               Price_Range_Category == "100-150")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### High Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Office Supplies" &
+            (Price_Range_Category == "Above 1000" |
+               Price_Range_Category == "500-1000" |
+               Price_Range_Category == "400-500" |
+               Price_Range_Category == "300-400" |
+               Price_Range_Category == "250-300")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+#### Furniture
+
+##### Low Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Furniture" &
+            (Price_Range_Category == "50-100" |
+                Price_Range_Category == "25-50" |
+                Price_Range_Category == "10-25" |
+                Price_Range_Category == "5-10" |
+                Price_Range_Category == "0-5")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### Mid Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Furniture" &
+            (Price_Range_Category == "200-250" |
+               Price_Range_Category == "150-200" |
+               Price_Range_Category == "100-150")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+##### High Price Range
+
+```{r}
+ggplot(
+    aggregated_data_subcategory %>%
+        filter(Category == "Furniture" &
+            (Price_Range_Category == "Above 1000" |
+               Price_Range_Category == "500-1000" |
+               Price_Range_Category == "400-500" |
+               Price_Range_Category == "300-400" |
+               Price_Range_Category == "250-300")),
+    aes(x = Sub_Category, y = Total_Orders, fill = Sub_Category)
+) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Price_Range_Category, scales = "free_x", ncol = 3) +
+    theme_minimal() +
+    labs(
+        title = "Total Orders in Technology Category by Sub-Category and Price Range",
+        x = "Sub-Category",
+        y = "Total Orders"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Discounts
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+# Assuming you have already read the Orders_Processing data
+# Orders_Processing <- read.csv("path_to_your_Orders_Processing_file.csv")
+
+# Calculate total profit for each state and then divide by the population of 2021
+state_profit_per_capita <- Orders_Processing %>%
+  group_by(State) %>%
+  summarise(Total_Profit = sum(Total_Order_Profit, na.rm = TRUE),
+            Population = mean(Population2021, na.rm = TRUE)) %>%
+  mutate(Profit_Per_Capita = Total_Profit / Population)
+
+# Arrange the data by Profit_Per_Capita
+arranged_data <- state_profit_per_capita %>%
+  arrange(desc(Profit_Per_Capita))
+
+# Select the top 5 and bottom 5 states
+top_bottom_states <- arranged_data %>%
+  slice(c(1:5, (n()-4):n()))
+
+# Plotting
+ggplot(top_bottom_states, aes(x = reorder(State, Profit_Per_Capita), y = Profit_Per_Capita, fill = Profit_Per_Capita)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +  # Flips the axes for better readability
+  labs(title = "Top 5 and Bottom 5 States by Profit Per Capita (2021)",
+       x = "State",
+       y = "Profit Per Capita") +
+  theme_minimal() +
+  scale_fill_gradient(low = "blue", high = "red")  # Color gradient for visual appeal
+
+# Display the plot
+ggsave("profit_per_capita_plot.png", width = 10, height = 8)
+
+
+
+```
+```{r}
+
+# Assuming you have already calculated the yearly_state_profit_per_capita
+
+# Calculate the growth rate of profit per capita for each state
+growth_rate_profit_per_capita <- yearly_state_profit_per_capita %>%
+  arrange(State, Year) %>%
+  group_by(State) %>%
+  mutate(Profit_Per_Capita_Growth = (Profit_Per_Capita / lag(Profit_Per_Capita) - 1) * 100) %>%
+  na.omit() %>%
+  ungroup()
+
+# Calculate average growth rate for each state
+average_growth_rate <- growth_rate_profit_per_capita %>%
+  group_by(State) %>%
+  summarise(Average_Growth = mean(Profit_Per_Capita_Growth, na.rm = TRUE)) %>%
+  ungroup()
+
+# Select top 3 and bottom 3 states based on average growth rate
+top_bottom_growth_states <- average_growth_rate %>%
+  arrange(desc(Average_Growth)) %>%
+  slice(c(1:3, (n()-2):n()))
+
+# Plotting
+ggplot(top_bottom_growth_states, aes(x = reorder(State, Average_Growth), y = Average_Growth, fill = Average_Growth)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 3 and Bottom 3 States by Average Growth Rate of Profit Per Capita",
+       x = "State",
+       y = "Average Growth Rate (%)") +
+  theme_minimal() +
+  scale_fill_gradient(low = "red", high = "green")  # Color gradient for visual appeal
+
+# Save the plot
+ggsave("growth_rate_profit_per_capita_plot.png", width = 10, height = 8)
+
+
+```
+```{r}
+
+# Aggregate sales and profits by state, and calculate average population for each state
+statewise_data <- Orders_Processing %>%
+  group_by(State) %>%
+  summarise(Total_Sales = sum(Sales),
+            Total_Profit = sum(Profit),
+            Average_Population = mean(Population2021)) %>%
+  ungroup()
+
+# Calculate correlations
+sales_population_corr <- cor(statewise_data$Total_Sales, statewise_data$Average_Population)
+profit_population_corr <- cor(statewise_data$Total_Profit, statewise_data$Average_Population)
+
+# Print correlation coefficients
+print(paste("Correlation between Sales and Population:", sales_population_corr))
+print(paste("Correlation between Profit and Population:", profit_population_corr))
+
+# Scatter plot for Sales vs Population
+ggplot(statewise_data, aes(x = Average_Population, y = Total_Sales)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Sales vs Population", x = "Average Population", y = "Total Sales")
+
+# Scatter plot for Profit vs Population
+ggplot(statewise_data, aes(x = Average_Population, y = Total_Profit)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Profit vs Population", x = "Average Population", y = "Total Profit")
+
+
+```
+
+
+```{r}
+
+library(broom)
+
+
+# Example analysis: Correlation between Discount and Sales
+discount_sales_corr <- cor(Orders_Processing$Discount, Orders_Processing$Sales, use = "complete.obs")
+
+# Fit a linear model
+model <- lm(Sales ~ Discount, data = Orders_Processing)
+summary(model) # To get R2 and other stats
+model_fit <- glance(model)
+
+# Print correlation coefficient and R2
+print(paste("Correlation coefficient:", discount_sales_corr))
+print(paste("R-squared:", model_fit$r.squared))
+
+# Scatter plot with regression line
+ggplot(Orders_Processing, aes(x = Discount, y = Sales)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Sales vs Discount", x = "Discount", y = "Sales")
+
+```
+
+
+```{r}
+
+# Calculating the correlation between Discount and Profit
+discount_profit_corr <- cor(Orders_Processing$Discount, Orders_Processing$Profit, use = "complete.obs")
+
+# Fit a linear regression model
+model <- lm(Profit ~ Discount, data = Orders_Processing)
+model_summary <- summary(model)
+model_fit <- glance(model)
+
+# Print correlation coefficient and R2
+print(paste("Correlation coefficient between Discount and Profit:", discount_profit_corr))
+print(paste("R-squared of the model:", model_fit$r.squared))
+
+# Scatter plot with regression line for Discount vs Profit
+ggplot(Orders_Processing, aes(x = Discount, y = Profit)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Profit vs Discount", x = "Discount", y = "Profit")
+
+
+
+```
+
